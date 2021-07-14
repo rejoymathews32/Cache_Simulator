@@ -11,7 +11,7 @@ class Memory(object):
         self._depth = depth
         self._name = name
 
-        if depth > 0:
+        if depth > 0 and init_value:
             for addr in range(depth):
                 self._memory_data_struct[addr] = init_value
 
@@ -31,6 +31,11 @@ class Memory(object):
             return self._memory_data_struct[addr]
         except KeyError:
             print(f'Memory {self._name} : Out of range read addr={addr}')
+
+    @property
+    def name(self) -> str:
+        '''Defines the memory name'''
+        return self._name
 
     def __str__(self) -> str:
         out_str = ''

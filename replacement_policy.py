@@ -1,24 +1,20 @@
-import math as math
+# Author / Maintainer : Rejoy Roy Mathews
 
 class replacement_policy(object):
-    '''Defining the base class for replacement policies. \
-        A replacement policy operates on a cache with a specific \
-        cache size and cache associativity'''
+    '''Base class for replacement policies.A specific cache configuration
+    needs to be passed to the replacement policy to enable replacement policy
+    attributes being configured
+    '''
 
-    def __init__(self, size : int, associativity : int) -> None:
-        if(not(math.log2(size).is_integer())):
-            assert ValueError('Cache size must be a power of 2')
-        
-        if(not(math.log2(associativity).is_integer())):  
-            assert ValueError('Associativity must be a power of 2. Associativty "1" represents \
-            direct-mapped and associativity "0" represents fully-associative')
-
-        self._cache_size = size
+    def __init__(self, size : int = 0, associativity : int = 0) -> None:
+        self._cache_size          = size
         self._cache_associativity = associativity
-        self._cache_entries = self._cache_size / 4 # integer entries in the Cache are 4 bytes
-        self._cache_sets = self._cache_entries / self._cache_associativity
+        self._cache_entries       = self._cache_size / 4 # integer entries in the Cache are 4 bytes
+        self._cache_sets          = self._cache_entries / self._cache_associativity
 
-    def compute_to_evict(self, set_id : int) -> int :
-        # Derived classes need to override this implementation of
-        # which entry in the set to evict
-        return 0
+    def compute_to_evict(self) -> None :
+        '''Runtime error if this function is invoked. This is meant to be
+        a purely virtual function which must be implemented in a derived class
+        '''
+        raise RuntimeError('Replacement policy does not have a method to compute \
+              which cache index to evict')

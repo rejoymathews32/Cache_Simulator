@@ -1,183 +1,142 @@
-import Memory as Memory
+# Author / Maintainer : Rejoy Roy Mathews
+
+from Memory import Memory
 import replacement_policy as replacement_policy
 import math as math
 
 class Cache(object):
-    '''This class models a cache'''
-    def __init__(self, size : int, \
-                associativity : int, \
-                initial_value, write_policy : str, \
-                extern_memory : Memory, \
-                r_policy : replacement_policy) -> None:
-
-        if(not(math.log2(size).is_integer())):
-            assert ValueError('Cache size must be a power of 2')
-        
-        if(not(math.log2(associativity).is_integer())):  
-            assert ValueError('Associativity must be a power of 2. Associativty "1" represents \
-            direct-mapped')
+    '''Modelling a cache which is defined by its
+    Reference to the main memory,
+    Reference to a cache replacement policy,
+    size in Bytes - 64 Bytes to 64 Bytes range,
+    associativity - 1 to 16-way associativity support,
+    write policy - write back ("wb") or write through("wt") write policy support
+    '''
+    def __init__(self,                
+                name : str = 'default',
+                size : int = 64,
+                associativity : int = 1,
+                write_policy : str = 'wt',
+                extern_memory : Memory = None,
+                r_policy : replacement_policy = None
+                ) -> None:
                 
-        if(not(associativity > 0 and associativity <= 16) or \
-            not(size >= 64 and size < 67108864)):  
-            assert ValueError('Associativity supported - Direct mapped upto 16 way associative \n \
-                                Cache size supported is 64Bytes upto 64 MBytes')
+        # Check cache size range - 64B to 64MB
+        # Check associaitivity range - 1 to 16
+        # Check if cache size is a power of 2
+        # Check if associativity is a power of 2
+        if(not(size >= 64 and size <= 67108864) or 
+            not(associativity > 0 and associativity <= 16) or
+            not(math.log2(size).is_integer()) or
+            not(math.log2(associativity).is_integer())):
 
-        try:
-            if(write_policy != 'wb' or write_policy != 'wt'):
-                raise ValueError
-        except ValueError:
-            print('Valid cache policies include write back ("wb") and write through ("wt")')
-        else:
-            self._write_policy = write_policy
-            if(write_policy == 'wb'):
-                self._cache_entry_dirty = []
-                for x in range(self._cache_entries):
-                    self._cache_entry_dirty.append(0)
+            raise ValueError('Cache size must be a power of 2 and must be within the range \
+                of 64Bytes and 64MBytes. \n \
+                Associativity must be a power of 2 and must be within the range of 1 to 16. \
+                Associativty "1" represents a direct-mapped cache')
 
+        if(not(write_policy == 'wb' or write_policy == 'wt')):
+            raise ValueError('Valid cache policies include write back ("wb") and write through ("wt"). \
+                    Provide "wb" or "wt" as input')
 
-        # To be used for cache configuration dump        
-        self._cache_size = size
-        self._cache_associativity = associativity
-        self._cache_entries = self._cache_size / 4 # integer entries in the Cache are 4 bytes
-        self._cache_sets = self._cache_entries / self._cache_associativity
-        self._cache_set_bits = math.log2(self._cache_sets)
-        # integer bit size - size of set bits - integer log2 byte size
-        self._cache_tag_bits = 32 - math.log2(self._cache_set_bits) - 2
-
+        self._name                = name # Cache name
+        self._write_policy        = write_policy # Cache write policy
+        self._cache_size          = size # Cache size
+        self._cache_associativity = associativity # Cache associaitivty
+        self._cache_entries       = self._cache_size / 4 # integer entries in the Cache are 4 bytes each
+        self._cache_sets          = self._cache_entries / self._cache_associativity # Number of sets in a cache
+        self._cache_set_bits      = math.log2(self._cache_sets) # Cache set bits
+        # cache tagbits = address size - size of set bits - integer log2 byte size
+        self._cache_tag_bits      = 32 - math.log2(self._cache_set_bits) - 2
         # Instantiate cache memory
-        self._cache_memory = Memory(self._cache_entries, initial_value)
-
+        self._cache_memory        = Memory(name+'_mem', self._cache_entries)
         # Link to the external memory and replacement policy for this cache
-        self._extern_main_memory = extern_memory
-        self._replacement_policy = r_policy
-
+        self._extern_main_memory  = extern_memory
+        self._replacement_policy  = r_policy
         # Define datastructure for cache entry status
-        self._cache_entry_valid = []
-
+        self._cache_entry_valid   = []
         # Define datastructure for cache entry tag
-        self._cache_entry_tag = []
-
-        # Initialize all cache entries status and entry tags to 0
+        self._cache_entry_tag     = {}
+        # Define data structure for cache entry ditry
+        self._cache_entry_dirty   = []
+        # Initialize all cache entries status and dirty bits to 0
         for x in range(self._cache_entries):
-            self._cache_entry_valid.append(0)
-            self._cache_entry_tag.append(0)
-
+            self._cache_entry_valid.append(0)            
+            self._cache_entry_dirty.append(0)
 
     def _compute_cache_write_entry(self, address : int) -> int :
-        '''This method implements the actual write to cache memory \
-            This method will have wrpper functions around it'''
-
-        # Cache set to write to
+        '''Compute the cache entry to write to.
+        If a cache set is empty the first entry in the set is selected.
+        If the cache set is full the replacement policy computed entry is over-written
+        If the cache is partly full, the entry with a matching tag is selected, in the
+        absence of which the first unused entry is selected
+        '''
+        # Cache set to write to.
+        # 2+ is used to offet 0b in the binary string created from bin()
         cache_set_selected = int(bin(address)[2+self._cache_tag_bits:2+ \
-        self._cache_tag_bits+self._cache_set_bits],2)            
+                                self._cache_tag_bits+self._cache_set_bits],2)            
         
-        cache_set_empty = 1
-        cache_set_full = 1
+        cache_set_empty    = 1
+        cache_set_full     = 1
 
-        for x in range(cache_set_selected \
-                    *self._cache_associativity, \
-                    cache_set_selected*self._cache_associativity \
-                    + self._cache_associativity):
+        set_idx = cache_set_selected*self._cache_associativity
 
-            if(self._cache_entry_valid[x] == 1):
+        for entr_idx in range(set_idx,set_idx+self._cache_associativity):
+            if(self._cache_entry_valid[entr_idx] == 1):
                 cache_set_empty = 0
-                break
+            if(self._cache_entry_valid[entr_idx] == 0):
+                cache_set_full  = 0
 
-        for x in range(cache_set_selected \
-                        *self._cache_associativity, \
-                        cache_set_selected*self._cache_associativity \
-                        + self._cache_associativity):
-
-            if(self._cache_entry_valid[x] == 0):
-                cache_set_full = 0
-                break
+        #### Select the cache index to write to ####
+        cache_idx  = 0
         
-        cache_index_selected  = 0
-        # Cache is empty
-        if(cache_set_empty):
-
-            # Select first entry in the set
-            cache_index_selected = cache_set_selected*self._cache_associativity
-            
-        #Cache is full
-        elif(cache_set_full):
-
+        if(cache_set_empty): # Cache is empty            
+            cache_idx = set_idx # Select first entry in the set                   
+        elif(cache_set_full): #Cache is full
             # Compute which entry to evict
             eviction_index = self._replacement_policy.compute_to_evict(cache_set_selected)
-            cache_index_selected = cache_set_selected *self._cache_associativity + eviction_index
-
-        #Cache has some entries
-        else: 
-            
-            for x in range(cache_set_selected \
-                            *self._cache_associativity, \
-                            cache_set_selected*self._cache_associativity \
-                            + self._cache_associativity):
+            cache_idx = set_idx + eviction_index
+        else: #Cache has some entries            
+            for entr_idx in range(set_idx,set_idx+self._cache_associativity):
                 # Check if there is a matching tag                
-                if((self._cache_entry_valid[x] == 1) and \
-                    (self._cache_entry_tag[x] == int(bin(address)[2:2+self._cache_tag_bits],2))):
-                    cache_index_selected = x
+                if((self._cache_entry_valid[entr_idx] == 1) and \
+                    (self._cache_entry_tag[entr_idx]  == int(bin(address)[2:2+self._cache_tag_bits],2))):
+                    cache_idx = entr_idx
                     break
-
                 # Else write to first available entry
-                elif(self._cache_entry_valid[x] == 0):
-                    cache_index_selected = x
+                elif(self._cache_entry_valid[entr_idx] == 0):
+                    cache_idx = entr_idx
                     break
-        
-        
-        return cache_index_selected
+                
+        return cache_idx
 
     def _write_to_cache_wb(self, address : int, data : int) -> None:
         '''Write to a write-back cache includes writing only to the cache. \
             Writes to memory are limited to "dirty entries" in cache'''
-
         # Invoke the function that actually writes to the cache memory
-        cache_index_selected = self._compute_cache_write_entry(address)
+        cache_idx = self._compute_cache_write_entry(address)
 
-        if(self._cache_entry_dirty[cache_index_selected]):
+        if(self._cache_entry_dirty[cache_idx]):
             # Write to main memory before writing to cache
-
-            memory_address = self._cache_entry_tag[cache_index_selected] \
-                            << (self._cache_set_bits + 2) + \
-                             cache_index_selected << 2
-
-            self._extern_memory.memory_write(memory_address, \
-            self._cache_memory.memory_read(cache_index_selected))
-
-        # Write to cache memory
-        self._cache_memory.memory_write(cache_index_selected, data)
-        #Mark this entry as a valid cache entry
-        self._cache_entry_valid[cache_index_selected] = 1
-        #Upadte dirty bit for the entry
-        self._cache_entry_dirty[cache_index_selected] = 1            
-        #Update set entry tag
-        self._cache_entry_tag[cache_index_selected] = \
-        int(bin(address)[2:2+self._cache_tag_bits],2)
+            mem_addr = (self._cache_entry_tag[cache_idx] << (self._cache_set_bits + 2)) + (cache_idx << 2)
+            self._extern_memory.memory_write(mem_addr, self._cache_memory.memory_read(cache_idx))
+        self._cache_memory.memory_write(cache_idx, data) # Write to cache memory
+        self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
+        self._cache_entry_dirty[cache_idx] = 1 #Upadte dirty bit for the entry
+        self._cache_entry_tag[cache_idx]   = int(bin(address)[2:2+self._cache_tag_bits],2)
 
     def _write_to_cache_wt(self, address : int, data : int) -> None:
         '''Write to a write-through cache includes writing to the cache \
-            and to the memory'''
-
-        # Always write to main memory in a write through cache
-        self._extern_main_memory.memory_write(address,data)        
-
-        # Invoke the function that actually writes to the cache memory
-        cache_index_selected = self._compute_cache_write_entry(address)
-
-        self._cache_memory.memory_write(cache_index_selected, data)
-
-        # Write through does not have the concept of dirty bit
-
-        #Mark this entry as a valid cache entry
-        self._cache_entry_valid[cache_index_selected] = 1
-        #Upadte dirty bit for the entry
-        self._cache_entry_dirty[cache_index_selected] = 1            
-        # Cache tag update for cache entry
-        self._cache_entry_tag[cache_index_selected] = \
-        int(bin(address)[2:2+self._cache_tag_bits],2)
+            and to the memory'''        
+        self._extern_main_memory.memory_write(address,data) # Always write to main memory    
+        cache_idx = self._compute_cache_write_entry(address) # Compute cache write index
+        self._cache_memory.memory_write(cache_idx, data) # writes to the cache memory
+        # Write through does not have the concept of dirty bit        
+        self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
+        self._cache_entry_tag[cache_idx]   = int(bin(address)[2:2+self._cache_tag_bits],2) #Update set entry tag
 
     def write_to_cache(self, address : int, data : int) -> None:
-        '''Write to the cache'''
+        '''Write to the cache : Cache[fn(addr)] = data'''
         if(self._write_policy == 'wb'):
             self._write_to_cache_wb(address,data)
         else:
@@ -185,43 +144,39 @@ class Cache(object):
 
     def read_from_cache(self, address : int) -> hex:         
         '''Read from the cache'''
-
         cache_set_selected = int(bin(address)[2+self._cache_tag_bits: \
                                  2+self._cache_tag_bits+self._cache_set_bits],2)
 
-        for x in range(cache_set_selected \
-                        *self._cache_associativity, \
-                        cache_set_selected*self._cache_associativity \
-                        + self._cache_associativity):
-                        if((self._cache_entry_tag[x] == int(bin(address)[2:2+self._cache_tag_bits],2)) and \
-                        (self._cache_entry_valid[x] == 1)):
-                            return self._cache_memory.memory_read(x)
-        
-        # Entry not available in the cache
-        # Read from the main memory        
+        set_idx = cache_set_selected*self._cache_associativity
+        for entr_idx in range(set_idx, set_idx + self._cache_associativity):
+                        if((self._cache_entry_tag[entr_idx] == int(bin(address)[2:2+self._cache_tag_bits],2)) and \
+                         (self._cache_entry_valid[entr_idx] == 1)):
+                            return self._cache_memory.memory_read(entr_idx)        
+        # Entry not available in the cache. Read from the main memory        
         extern_memory_read = self._extern_main_memory.memory_read(address)
-
         # Update this read data into the cache for future use
         self.write_to_cache(address, extern_memory_read)
-
         return extern_memory_read
 
+    @property
+    def name(self) -> str:
+        '''Returns the cache name'''
+        return self._name
     
     def __str__(self) -> str:
-        out_str = ''               
+        out_str = ''
+        out_str = out_str + '======================================================='
+        out_str = out_str + f'Cache name : {self._name} \n'           
         out_str = out_str + f'Cache size : {self._cache_size}.\n'
+        out_str = out_str + f'Cache write policy : {self._write_policy}.\n'
+        out_str = out_str + f'Cache replacement policy : {self._replacement_policy.name}'
         out_str = out_str + f'Cache Associativity : {self._cache_associativity}.\n'
-        out_str = out_str + f'Below is the cache dump.\n'
-        for x in range(self._cache_sets):
-            for y in range(self._cache_associativity):
-                out_str = out_str + f'Cache set {x}, entry {y} : \
-                    {self._cache_memory.memory_read(x*self._cache_associativity + y)}.\n'
+        out_str = out_str + f'Memory Interface : {self._extern_main_memory.name}.\n'
+        out_str = out_str + '======================================================='
+        out_str = out_str + f'Cache dump format - Cache[set index, set entry index]\n'
+        for set_idx in range(self._cache_sets):
+            for set_ent_idx in range(self._cache_associativity):
+                out_str = out_str + f'Cache[{set_idx},{set_ent_idx}] = \
+                    {self._cache_memory.memory_read(set_idx*self._cache_associativity + set_ent_idx)}.\n'
 
         return out_str
-
-
-
-
-
-    
-
