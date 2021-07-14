@@ -39,8 +39,8 @@ class Cache(object):
         self._cache_size = size
         self._cache_associativity = associativity
         self._cache_entries = self._cache_size / 4 # integer entries in the Cache are 4 bytes
-
-        self._cache_set_bits = math.log2(self._cache_entries / self._cache_associativity)
+        self._cache_sets = self._cache_entries / self._cache_associativity
+        self._cache_set_bits = math.log2(self._cache_sets)
         # integer bit size - size of set bits - integer log2 byte size
         self._cache_tag_bits = 32 - math.log2(self._cache_set_bits) - 2
 
@@ -96,6 +96,7 @@ class Cache(object):
         # Cache is empty
         if(cache_set_empty):
 
+            # Select first entry in the set
             cache_index_selected = cache_set_selected*self._cache_associativity
             
         #Cache is full
@@ -113,8 +114,8 @@ class Cache(object):
                             cache_set_selected*self._cache_associativity \
                             + self._cache_associativity):
                 # Check if there is a matching tag                
-                if((self._cache_entry_tag[x] == int(bin(address)[2:2+self._cache_tag_bits],2)) and \
-                (self._cache_entry_valid[x] == 1)):
+                if((self._cache_entry_valid[x] == 1) and \
+                    (self._cache_entry_tag[x] == int(bin(address)[2:2+self._cache_tag_bits],2))):
                     cache_index_selected = x
                     break
 
@@ -135,7 +136,13 @@ class Cache(object):
 
         if(self._cache_entry_dirty[cache_index_selected]):
             # Write to main memory before writing to cache
-            self._extern_memory.memory_write(self._cache_memory.memory_read(cache_index_selected))
+
+            memory_address = self._cache_entry_tag[cache_index_selected] \
+                            << (self._cache_set_bits + 2) + \
+                             cache_index_selected << 2
+
+            self._extern_memory.memory_write(memory_address, \
+            self._cache_memory.memory_read(cache_index_selected))
 
         # Write to cache memory
         self._cache_memory.memory_write(cache_index_selected, data)
@@ -161,9 +168,13 @@ class Cache(object):
 
         # Write through does not have the concept of dirty bit
 
-        # Cache tag for cache entry
-        self._cache_entry_tag = int(bin(address)[2:2+ \
-        self._cache_tag_bits+self._cache_set_bits],2)
+        #Mark this entry as a valid cache entry
+        self._cache_entry_valid[cache_index_selected] = 1
+        #Upadte dirty bit for the entry
+        self._cache_entry_dirty[cache_index_selected] = 1            
+        # Cache tag update for cache entry
+        self._cache_entry_tag[cache_index_selected] = \
+        int(bin(address)[2:2+self._cache_tag_bits],2)
 
     def write_to_cache(self, address : int, data : int) -> None:
         '''Write to the cache'''
@@ -195,19 +206,18 @@ class Cache(object):
 
         return extern_memory_read
 
-
-
-
-
-        
-
-                
-
     
-    
-    #RRM - define this
     def __str__(self) -> str:
-        return super().__str__()            
+        out_str = ''               
+        out_str = out_str + f'Cache size : {self._cache_size}.\n'
+        out_str = out_str + f'Cache Associativity : {self._cache_associativity}.\n'
+        out_str = out_str + f'Below is the cache dump.\n'
+        for x in range(self._cache_sets):
+            for y in range(self._cache_associativity):
+                out_str = out_str + f'Cache set {x}, entry {y} : \
+                    {self._cache_memory.memory_read(x*self._cache_associativity + y)}.\n'
+
+        return out_str
 
 
 
