@@ -59,6 +59,14 @@ class Cache(object):
         self._cache_entry_tag     = {}
         # Define data structure for cache entry ditry
         self._cache_entry_dirty   = []
+        # Total cache memory read count
+        self._cache_rd_ct  = 0
+        # Total cache memory write count
+        self._cache_wr_ct  = 0
+        # Total cache hits
+        self._cache_hits  = 0
+        # Total cache misses
+        self._cache_misses  = 0
         # Initialize all cache entries status and dirty bits to 0
         for x in range(self._cache_entries):
             self._cache_entry_valid.append(0)            
@@ -137,6 +145,7 @@ class Cache(object):
 
     def write_to_cache(self, address : int, data : int) -> None:
         '''Write to the cache : Cache[fn(addr)] = data'''
+        self._cache_wr_ct+=1
         if(self._write_policy == 'wb'):
             self._write_to_cache_wb(address,data)
         else:
@@ -144,6 +153,7 @@ class Cache(object):
 
     def read_from_cache(self, address : int) -> hex:         
         '''Read from the cache'''
+        self._cache_rd_ct+=1
         cache_set_selected = int(bin(address)[2+self._cache_tag_bits: \
                                  2+self._cache_tag_bits+self._cache_set_bits],2)
 
@@ -151,11 +161,13 @@ class Cache(object):
         for entr_idx in range(set_idx, set_idx + self._cache_associativity):
                         if((self._cache_entry_tag[entr_idx] == int(bin(address)[2:2+self._cache_tag_bits],2)) and \
                          (self._cache_entry_valid[entr_idx] == 1)):
+                            self._cache_hits+=1
                             return self._cache_memory.memory_read(entr_idx)        
         # Entry not available in the cache. Read from the main memory        
         extern_memory_read = self._extern_main_memory.memory_read(address)
-        # Update this read data into the cache for future use
+        # Update this read data into the cache for future use        
         self.write_to_cache(address, extern_memory_read)
+        self._cache_misses+=1
         return extern_memory_read
 
     @property
@@ -180,3 +192,10 @@ class Cache(object):
                     {self._cache_memory.memory_read(set_idx*self._cache_associativity + set_ent_idx)}.\n'
 
         return out_str
+
+    def stats(self) -> None:
+        out_str = ''
+        out_str = out_str + f'Cache {self._name} total reads : {self._cache_rd_ct} \n'
+        out_str = out_str + f'Cache {self._name} total writes : {self._cache_wr_ct} \n'
+        out_str = out_str + f'Cache {self._name} hits : {self._cache_hits} \n'
+        out_str = out_str + f'Cache {self._name} misses : {self._cache_misses} \n'
