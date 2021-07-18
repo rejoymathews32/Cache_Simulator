@@ -41,13 +41,13 @@ class Cache(object):
 
         self._name                = name # Cache name
         self._write_policy        = write_policy # Cache write policy
-        self._cache_size          = size # Cache size
-        self._cache_associativity = associativity # Cache associaitivty
-        self._cache_entries       = self._cache_size / 4 # integer entries in the Cache are 4 bytes each
-        self._cache_sets          = self._cache_entries / self._cache_associativity # Number of sets in a cache
-        self._cache_set_bits      = math.log2(self._cache_sets) # Cache set bits
+        self._cache_size          = int(size) # Cache size
+        self._cache_associativity = int(associativity) # Cache associaitivty
+        self._cache_entries       = int(self._cache_size / 4) # integer entries in the Cache are 4 bytes each
+        self._cache_sets          = int(self._cache_entries / self._cache_associativity) # Number of sets in a cache
+        self._cache_set_bits      = int(math.log2(self._cache_sets)) # Cache set bits
         # cache tagbits = address size - size of set bits - integer log2 byte size
-        self._cache_tag_bits      = 32 - math.log2(self._cache_set_bits) - 2
+        self._cache_tag_bits      = 32 - int(math.log2(self._cache_set_bits)) - 2
         # Instantiate cache memory
         self._cache_memory        = Memory(name+'_mem', self._cache_entries)
         # Link to the external memory and replacement policy for this cache
@@ -56,7 +56,7 @@ class Cache(object):
         # Define datastructure for cache entry status
         self._cache_entry_valid   = []
         # Define datastructure for cache entry tag
-        self._cache_entry_tag     = {}
+        self._cache_entry_tag     = []
         # Define data structure for cache entry ditry
         self._cache_entry_dirty   = []
         # Total cache memory read count
@@ -69,7 +69,8 @@ class Cache(object):
         self._cache_misses  = 0
         # Initialize all cache entries status and dirty bits to 0
         for x in range(self._cache_entries):
-            self._cache_entry_valid.append(0)            
+            self._cache_entry_valid.append(0)
+            self._cache_entry_tag.append(0)        
             self._cache_entry_dirty.append(0)
 
     def _compute_cache_write_entry(self, address : int) -> int :
@@ -80,8 +81,7 @@ class Cache(object):
         absence of which the first unused entry is selected
         '''
         # Cache set to write to.
-        # 2+ is used to offet 0b in the binary string created from bin()
-        cache_set_selected = int(bin(address)[2+self._cache_tag_bits:2+ \
+        cache_set_selected = int('{:032b}'.format(int(address))[self._cache_tag_bits: \
                                 self._cache_tag_bits+self._cache_set_bits],2)            
         
         cache_set_empty    = 1
@@ -108,7 +108,7 @@ class Cache(object):
             for entr_idx in range(set_idx,set_idx+self._cache_associativity):
                 # Check if there is a matching tag                
                 if((self._cache_entry_valid[entr_idx] == 1) and \
-                    (self._cache_entry_tag[entr_idx]  == int(bin(address)[2:2+self._cache_tag_bits],2))):
+                    (self._cache_entry_tag[entr_idx]  == int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2))):
                     cache_idx = entr_idx
                     break
                 # Else write to first available entry
@@ -131,7 +131,7 @@ class Cache(object):
         self._cache_memory.memory_write(cache_idx, data) # Write to cache memory
         self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
         self._cache_entry_dirty[cache_idx] = 1 #Upadte dirty bit for the entry
-        self._cache_entry_tag[cache_idx]   = int(bin(address)[2:2+self._cache_tag_bits],2)
+        self._cache_entry_tag[cache_idx]   = int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2)
 
     def _write_to_cache_wt(self, address : int, data : int) -> None:
         '''Write to a write-through cache includes writing to the cache \
@@ -141,7 +141,7 @@ class Cache(object):
         self._cache_memory.memory_write(cache_idx, data) # writes to the cache memory
         # Write through does not have the concept of dirty bit        
         self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
-        self._cache_entry_tag[cache_idx]   = int(bin(address)[2:2+self._cache_tag_bits],2) #Update set entry tag
+        self._cache_entry_tag[cache_idx]   = int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2) #Update set entry tag
 
     def write_to_cache(self, address : int, data : int) -> None:
         '''Write to the cache : Cache[fn(addr)] = data'''
@@ -154,12 +154,12 @@ class Cache(object):
     def read_from_cache(self, address : int) -> hex:         
         '''Read from the cache'''
         self._cache_rd_ct+=1
-        cache_set_selected = int(bin(address)[2+self._cache_tag_bits: \
+        cache_set_selected = int('{:032b}'.format(int(address))[2+self._cache_tag_bits: \
                                  2+self._cache_tag_bits+self._cache_set_bits],2)
 
         set_idx = cache_set_selected*self._cache_associativity
         for entr_idx in range(set_idx, set_idx + self._cache_associativity):
-                        if((self._cache_entry_tag[entr_idx] == int(bin(address)[2:2+self._cache_tag_bits],2)) and \
+                        if((self._cache_entry_tag[entr_idx] == int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2)) and \
                          (self._cache_entry_valid[entr_idx] == 1)):
                             self._cache_hits+=1
                             return self._cache_memory.memory_read(entr_idx)        
@@ -177,14 +177,14 @@ class Cache(object):
     
     def __str__(self) -> str:
         out_str = ''
-        out_str = out_str + '======================================================='
+        out_str = out_str + '=======================================================\n'
         out_str = out_str + f'Cache name : {self._name} \n'           
         out_str = out_str + f'Cache size : {self._cache_size}.\n'
         out_str = out_str + f'Cache write policy : {self._write_policy}.\n'
-        out_str = out_str + f'Cache replacement policy : {self._replacement_policy.name}'
+        out_str = out_str + f'Cache replacement policy : {self._replacement_policy.name}\n'
         out_str = out_str + f'Cache Associativity : {self._cache_associativity}.\n'
-        out_str = out_str + f'Memory Interface : {self._extern_main_memory.name}.\n'
-        out_str = out_str + '======================================================='
+        out_str = out_str + f'Cache Memory Interface : {self._extern_main_memory.name}.\n'
+        out_str = out_str + '=======================================================\n'
         out_str = out_str + f'Cache dump format - Cache[set index, set entry index]\n'
         for set_idx in range(self._cache_sets):
             for set_ent_idx in range(self._cache_associativity):
@@ -199,3 +199,4 @@ class Cache(object):
         out_str = out_str + f'Cache {self._name} total writes : {self._cache_wr_ct} \n'
         out_str = out_str + f'Cache {self._name} hits : {self._cache_hits} \n'
         out_str = out_str + f'Cache {self._name} misses : {self._cache_misses} \n'
+        print(out_str)

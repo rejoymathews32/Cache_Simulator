@@ -7,7 +7,7 @@ class LRU(replacement_policy):
     This entry can then be replaced with a new cache entry
     '''
 
-    def __init__(self, size : int = 0, associativity : int = 0) -> None:
+    def __init__(self, size : int = 64, associativity : int = 1) -> None:
         super().__init__(size, associativity)
         self._age_vector = [] # LRU keeps track of age for all cache entries        
         for x in range (self._cache_entries): # Initialize age for all cache entries to 0
@@ -19,15 +19,15 @@ class LRU(replacement_policy):
         the age of all the entries in a set by one upon cache set access.
         The age of the cache set entry that was accessed is set to 0'''        
         replace_index = 0
-        set_base_addr = set_id*self._associativity
+        set_base_addr = set_id*self._cache_associativity
 
         max_age = self._age_vector[set_base_addr]
-        for idx in range(set_base_addr,set_base_addr+self._associativity):
+        for idx in range(set_base_addr,set_base_addr+self._cache_associativity):
             if(self._age_vector[idx] > max_age):
                 max_age = self._age_vector
                 replace_index = idx
 
-        for idx in range(set_base_addr, set_base_addr+self._associativity):
+        for idx in range(set_base_addr, set_base_addr+self._cache_associativity):
             if(idx == replace_index):
                 self._age_vector[idx] = 0
             else:

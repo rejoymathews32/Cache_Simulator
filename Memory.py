@@ -49,7 +49,7 @@ class Memory(object):
         out_str = out_str + f'Memory {self._name} contents. \n'
         out_str = out_str + '=================='+'='*len(self._name) +'\n'
         for k,v in self._memory_data_struct.items():            
-            out_str = out_str + f'addr[{hex(k)}] : {hex(v)}.\n'
+            out_str = out_str + f'addr[{k}] : {v}.\n'
 
         return out_str
 
@@ -58,3 +58,4 @@ class Memory(object):
         out_str = ''
         out_str = out_str + f'Memory {self._name} total reads : {self._memory_reads} \n'
         out_str = out_str + f'Memory {self._name} total writes : {self._memory_writes} \n'
+        print(out_str)
