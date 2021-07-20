@@ -1,6 +1,5 @@
 # Author / Maintainer : Rejoy Roy Mathews
 
-from os import write
 from Memory import Memory
 import replacement_policy as replacement_policy
 import math as math
@@ -47,8 +46,8 @@ class Cache(object):
         self._cache_entries       = int(self._cache_size / 4) # integer entries in the Cache are 4 bytes each
         self._cache_sets          = int(self._cache_entries / self._cache_associativity) # Number of sets in a cache
         self._cache_set_bits      = int(math.log2(self._cache_sets)) # Cache set bits
-        # cache tagbits = address size - size of set bits - integer log2 byte size
-        self._cache_tag_bits      = 32 - int(math.log2(self._cache_set_bits)) - 2
+        # cache tagbits = address size - size of set bits
+        self._cache_tag_bits      = 32 - self._cache_set_bits
         # Instantiate cache memory
         self._cache_memory        = Memory(name+'_mem', self._cache_entries)
         # Link to the external memory and replacement policy for this cache
@@ -135,6 +134,8 @@ class Cache(object):
             Writes to memory are limited to "dirty entries" in cache'''
         # Invoke the function that actually writes to the cache memory
         cache_idx, write_to_mem = self._compute_cache_write_entry(address)
+        # Inform the replacement policy about a cache access
+        self._replacement_policy.cache_ent_acc(cache_idx)
         if(self._cache_entry_dirty[cache_idx] and write_to_mem):
             # Write to main memory before writing to cache
             mem_addr = (self._cache_entry_tag[cache_idx] << (self._cache_set_bits)) + int(cache_idx/self._cache_associativity)
@@ -153,7 +154,8 @@ class Cache(object):
         '''Write to a write-through cache includes writing to the cache \
             and to the memory'''        
         self._extern_main_memory.memory_write(address,data) # Always write to main memory    
-        cache_idx = self._compute_cache_write_entry(address) # Compute cache write index
+        cache_idx = self._compute_cache_write_entry(address) # Compute cache write index        
+        self._replacement_policy.cache_ent_acc(cache_idx) # Inform the replacement policy about a cache access
         self._cache_memory.memory_write(cache_idx, data) # writes to the cache memory
         # Write through does not have the concept of dirty bit        
         self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
@@ -178,6 +180,8 @@ class Cache(object):
                         if((self._cache_entry_tag[entr_idx] == int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2)) and \
                          (self._cache_entry_valid[entr_idx] == 1)):
                             self._cache_hits+=1
+                            # Inform the replacement policy about a cache access
+                            self._replacement_policy.cache_ent_acc(entr_idx)
                             return self._cache_memory.memory_read(entr_idx)        
         # Entry not available in the cache. Read from the main memory        
         extern_memory_read = self._extern_main_memory.memory_read(address)

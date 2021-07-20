@@ -16,5 +16,12 @@ class replacement_policy(object):
         '''Runtime error if this function is invoked. This is meant to be
         a purely virtual function which must be implemented in a derived class
         '''
-        raise RuntimeError('Replacement policy does not have a method to compute \
-              which cache index to evict')
+        raise RuntimeError('Replacement policy does not define the implementation \
+              for this method. Create a derived class and implement this method')
+
+    def cache_ent_acc(self) -> None :
+        '''Runtime error if this function is invoked. This is meant to be
+        a purely virtual function which must be implemented in a derived class
+        '''
+        raise RuntimeError('Replacement policy does not define the implementation \
+              for this method. Create a derived class and implement this method')              
