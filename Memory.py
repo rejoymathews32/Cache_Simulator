@@ -30,7 +30,7 @@ class Memory(object):
 
     def memory_read(self, addr : int) -> int:
         '''Memory read operation : returns Memory[addr]'''
-        try:
+        try:         
             self._memory_data_struct[addr]
         except KeyError:
             print(f'Memory {self._name} : Out of range read addr={addr}')

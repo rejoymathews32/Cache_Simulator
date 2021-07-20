@@ -1,5 +1,6 @@
 # Author / Maintainer : Rejoy Roy Mathews
 
+from os import replace
 from replacement_policy  import replacement_policy
 
 class LRU(replacement_policy):
@@ -18,9 +19,9 @@ class LRU(replacement_policy):
         has been used least recently will be evicted. LRU does this by increamenting
         the age of all the entries in a set by one upon cache set access.
         The age of the cache set entry that was accessed is set to 0'''        
-        replace_index = 0
-        set_base_addr = set_id*self._cache_associativity
 
+        set_base_addr = set_id*self._cache_associativity
+        replace_index = set_base_addr
         max_age = self._age_vector[set_base_addr]
         for idx in range(set_base_addr,set_base_addr+self._cache_associativity):
             if(self._age_vector[idx] > max_age):

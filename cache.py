@@ -1,5 +1,6 @@
 # Author / Maintainer : Rejoy Roy Mathews
 
+from os import write
 from Memory import Memory
 import replacement_policy as replacement_policy
 import math as math
@@ -94,43 +95,58 @@ class Cache(object):
                 cache_set_empty = 0
             if(self._cache_entry_valid[entr_idx] == 0):
                 cache_set_full  = 0
-
-        #### Select the cache index to write to ####
-        cache_idx  = 0
         
+        cache_idx  = 0 #Select the cache index to write to
+        ent_in_cache = 0 #Check if entry exists in cache
+        write_to_mem = 1 #Write to main memory
+
         if(cache_set_empty): # Cache is empty            
             cache_idx = set_idx # Select first entry in the set                   
         elif(cache_set_full): #Cache is full
-            # Compute which entry to evict
-            eviction_index = self._replacement_policy.compute_to_evict(cache_set_selected)
-            cache_idx = set_idx + eviction_index
+            # Check if there is a matching tag in cache
+            for entr_idx in range(set_idx,set_idx+self._cache_associativity):             
+                if((self._cache_entry_valid[entr_idx] == 1) and \
+                    (self._cache_entry_tag[entr_idx]  == int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2))):
+                    cache_idx = entr_idx
+                    ent_in_cache = 1
+                    write_to_mem = 0
+                    break                  
+            # Else compute which entry to evict
+            if not (ent_in_cache):                 
+                eviction_index = self._replacement_policy.compute_to_evict(cache_set_selected)
+                cache_idx = set_idx + eviction_index
         else: #Cache has some entries            
             for entr_idx in range(set_idx,set_idx+self._cache_associativity):
                 # Check if there is a matching tag                
                 if((self._cache_entry_valid[entr_idx] == 1) and \
                     (self._cache_entry_tag[entr_idx]  == int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2))):
                     cache_idx = entr_idx
+                    write_to_mem = 0
                     break
                 # Else write to first available entry
                 elif(self._cache_entry_valid[entr_idx] == 0):
                     cache_idx = entr_idx
                     break
                 
-        return cache_idx
+        return cache_idx, write_to_mem
 
-    def _write_to_cache_wb(self, address : int, data : int) -> None:
+    def _write_to_cache_wb(self, address : int, data : int, rd_dr_wr : bool = False) -> None:
         '''Write to a write-back cache includes writing only to the cache. \
             Writes to memory are limited to "dirty entries" in cache'''
         # Invoke the function that actually writes to the cache memory
-        cache_idx = self._compute_cache_write_entry(address)
-
-        if(self._cache_entry_dirty[cache_idx]):
+        cache_idx, write_to_mem = self._compute_cache_write_entry(address)
+        if(self._cache_entry_dirty[cache_idx] and write_to_mem):
             # Write to main memory before writing to cache
-            mem_addr = (self._cache_entry_tag[cache_idx] << (self._cache_set_bits + 2)) + (cache_idx << 2)
-            self._extern_memory.memory_write(mem_addr, self._cache_memory.memory_read(cache_idx))
+            mem_addr = (self._cache_entry_tag[cache_idx] << (self._cache_set_bits)) + int(cache_idx/self._cache_associativity)
+            self._extern_main_memory.memory_write(mem_addr, self._cache_memory.memory_read(cache_idx))
+        
         self._cache_memory.memory_write(cache_idx, data) # Write to cache memory
         self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
-        self._cache_entry_dirty[cache_idx] = 1 #Upadte dirty bit for the entry
+
+        if(rd_dr_wr):
+            self._cache_entry_dirty[cache_idx] = 0 #Dont update dirty bit for entry
+        else:
+            self._cache_entry_dirty[cache_idx] = 1 #Upadte dirty bit for the entry
         self._cache_entry_tag[cache_idx]   = int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2)
 
     def _write_to_cache_wt(self, address : int, data : int) -> None:
@@ -143,19 +159,19 @@ class Cache(object):
         self._cache_entry_valid[cache_idx] = 1 #Mark this entry as a valid cache entry
         self._cache_entry_tag[cache_idx]   = int('{:032b}'.format(int(address))[0:self._cache_tag_bits],2) #Update set entry tag
 
-    def write_to_cache(self, address : int, data : int) -> None:
+    def write_to_cache(self, address : int, data : int, rd_dr_wr : bool = False) -> None:
         '''Write to the cache : Cache[fn(addr)] = data'''
         self._cache_wr_ct+=1
         if(self._write_policy == 'wb'):
-            self._write_to_cache_wb(address,data)
+            self._write_to_cache_wb(address,data, rd_dr_wr)
         else:
             self._write_to_cache_wt(address, data)
 
     def read_from_cache(self, address : int) -> hex:         
         '''Read from the cache'''
         self._cache_rd_ct+=1
-        cache_set_selected = int('{:032b}'.format(int(address))[2+self._cache_tag_bits: \
-                                 2+self._cache_tag_bits+self._cache_set_bits],2)
+        cache_set_selected = int('{:032b}'.format(int(address))[self._cache_tag_bits: \
+                                 self._cache_tag_bits+self._cache_set_bits],2)
 
         set_idx = cache_set_selected*self._cache_associativity
         for entr_idx in range(set_idx, set_idx + self._cache_associativity):
@@ -166,7 +182,7 @@ class Cache(object):
         # Entry not available in the cache. Read from the main memory        
         extern_memory_read = self._extern_main_memory.memory_read(address)
         # Update this read data into the cache for future use        
-        self.write_to_cache(address, extern_memory_read)
+        self.write_to_cache(address, extern_memory_read, True)
         self._cache_misses+=1
         return extern_memory_read
 

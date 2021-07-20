@@ -34,16 +34,18 @@ class cache_simulator(object):
 
         for ins in range(len(cache_ops)):
             if cache_ops[ins][0] == 'R':
-                self._cache.read_from_cache(cache_ops[ins][1])
+                self._cache.read_from_cache(int(cache_ops[ins][1]))
             elif cache_ops[ins][0] == 'W':
-                self._cache.write_to_cache(cache_ops[ins][1], cache_ops[ins][2])
+                self._cache.write_to_cache(int(cache_ops[ins][1]), int(cache_ops[ins][2]))
             else:
                 raise ValueError('Specify "R" for read operations or  \
                                 "W" for write operations as the opcode for the operation')
-            
+
+        #RRM
         self._stats()
         self._cache_dump()
         self._extern_memory_dump()
+
 
     def _extern_memory_dump(self) -> None:
         '''Print the contents of the external memory'''
@@ -66,7 +68,7 @@ def main():
              description='Run cache simulator.')
     parser.add_argument('--cache_name', '-cn', default='C0', type=str, help='The cache name. example: C0', metavar='cache_name', dest='cache_name')
     parser.add_argument('--cache_size', '-cs', default=64, type=int, help='The cache size. example: 4096', metavar='cache_size', dest='cache_size')
-    parser.add_argument('--cache_assoc', '-ca', default=1, type=int,help='The cache associativity. example: 4', metavar='cache_associativity', dest='cache_assoc')
+    parser.add_argument('--cache_assoc', '-ca', default=4, type=int,help='The cache associativity. example: 4', metavar='cache_associativity', dest='cache_assoc')
     parser.add_argument('--cache_wr_policy', '-cwp', default='wb', type=str, choices = ['wb','wt'], help='The cache write policy. write back or write through', 
                         metavar='cache_write_policy', dest='cache_wr_policy')
     parser.add_argument('--mem_name', '-mn', default='M0', type=str, help='The external memory name. example: M0', metavar='mem_name', dest='mem_name')
