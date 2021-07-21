@@ -15,7 +15,8 @@ class cache_simulator(object):
     '''
 
     def __init__(self, cache_sim_param : dict) -> None:
-        self._r_policy      = LRU()
+        self._r_policy      = LRU(cache_sim_param['cache_size'],
+                                  cache_sim_param['cache_assoc'])
         self._extern_memory = Memory(cache_sim_param['mem_name'],
                             cache_sim_param['mem_size'])
         self._cache         = Cache(cache_sim_param['cache_name'],

@@ -25,7 +25,7 @@ class LRU(replacement_policy):
         max_age = self._age_vector[set_base_addr]
         for idx in range(set_base_addr,set_base_addr+self._cache_associativity):
             if(self._age_vector[idx] > max_age):
-                max_age = self._age_vector
+                max_age = self._age_vector[idx]
                 replace_index = idx
 
         return replace_index - set_base_addr
@@ -36,11 +36,12 @@ class LRU(replacement_policy):
         access to any member in the set
         '''
         set_idx = int(cache_idx/self._cache_associativity)
-        for idx in range(set_idx,set_idx+self._cache_associativity):
+        set_ent_st_idx = set_idx*self._cache_associativity
+        for idx in range(set_ent_st_idx,set_ent_st_idx+self._cache_associativity):
             if(idx == cache_idx):
                 self._age_vector[idx] = 0
             else:
-               self._age_vector[idx] += 1
+               self._age_vector[idx] += 1        
 
     @property
     def name(self) -> str:

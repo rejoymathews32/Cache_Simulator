@@ -195,7 +195,7 @@ class Cache(object):
         '''Returns the cache name'''
         return self._name
     
-    def __str__(self) -> str:
+    def __str__(self) -> str:        
         out_str = ''
         out_str = out_str + '=======================================================\n'
         out_str = out_str + f'Cache name : {self._name} \n'           
