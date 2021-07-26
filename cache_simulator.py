@@ -35,14 +35,13 @@ class cache_simulator(object):
 
         for ins in range(len(cache_ops)):
             if cache_ops[ins][0] == 'R':
-                self._cache.read_from_cache(int(cache_ops[ins][1]))
+                self._cache.read_from_cache(int(cache_ops[ins][1],0))
             elif cache_ops[ins][0] == 'W':
-                self._cache.write_to_cache(int(cache_ops[ins][1]), int(cache_ops[ins][2]))
+                self._cache.write_to_cache(int(cache_ops[ins][1],0), int(cache_ops[ins][2],0))
             else:
                 raise ValueError('Specify "R" for read operations or  \
                                 "W" for write operations as the opcode for the operation')
 
-        #RRM
         self._stats()
         self._cache_dump()
         self._extern_memory_dump()

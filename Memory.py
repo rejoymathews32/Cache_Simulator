@@ -48,8 +48,14 @@ class Memory(object):
         out_str = out_str + '=================='+'='*len(self._name) +'\n'       
         out_str = out_str + f'Memory {self._name} contents. \n'
         out_str = out_str + '=================='+'='*len(self._name) +'\n'
-        for k,v in self._memory_data_struct.items():            
-            out_str = out_str + f'addr[{k}] : {v}.\n'
+        for k,v in self._memory_data_struct.items():
+            try:
+                hex(int(v))
+            except:
+                str_temp = v
+            else:
+                str_temp = hex(int(v))
+            out_str = out_str + f'addr[{hex(k)}] : {str_temp}.\n'
 
         return out_str
 

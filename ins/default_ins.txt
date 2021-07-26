@@ -1,12 +1,12 @@
-W 14 1445 #CW 1
-R 14 #CR 1 CH 1
-W 14 1234 #CW 2
-R 14 #CR 2 CH 2
-R 15 #CR 3 CM 1 MR 1 CW 3
-W 30 100 #CW 4
-W 31 200 #CW 5
-W 47 333 #CW 6
-W 46 555 #CW 7 MW 1
-W 79 999 #CW 8
-W 15 222 #CW 9
-W 63 444 #CW 10 MW 2
+W 0xe 0x5a5 #CW 1
+R 0xe #CR 1 CH 1
+W 0xe 0x4d2 #CW 2
+R 0xe #CR 2 CH 2
+R 0xf #CR 3 CM 1 MR 1 CW 3
+W 0x1e 0x64 #CW 4
+W 0x1f 0xc8 #CW 5
+W 0x2f 0x14d #CW 6
+W 0x2e 0x22b #CW 7 MW 1
+W 0x4f 0x3e7 #CW 8
+W 0xf 0xde #CW 9
+W 0x3f 0x1bc #CW 10 MW 2

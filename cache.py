@@ -8,7 +8,7 @@ class Cache(object):
     '''Modelling a cache which is defined by its
     Reference to the main memory,
     Reference to a cache replacement policy,
-    size in Bytes - 64 Bytes to 64 Bytes range,
+    size in Bytes - 64 Bytes to 64MBytes range,
     associativity - 1 to 16-way associativity support,
     write policy - write back ("wb") or write through("wt") write policy support
     '''
@@ -208,8 +208,14 @@ class Cache(object):
         out_str = out_str + f'Cache dump format - Cache[set index, set entry index]\n'
         for set_idx in range(self._cache_sets):
             for set_ent_idx in range(self._cache_associativity):
-                out_str = out_str + f'Cache[{set_idx},{set_ent_idx}] = \
-                    {self._cache_memory.memory_read(set_idx*self._cache_associativity + set_ent_idx)}.\n'
+                try :
+                    hex(int(self._cache_memory.memory_read(set_idx*self._cache_associativity + set_ent_idx)))
+                except:
+                    mem_content = self._cache_memory.memory_read(set_idx*self._cache_associativity + set_ent_idx)
+                else:
+                    mem_content = hex(int(self._cache_memory.memory_read(set_idx*self._cache_associativity + set_ent_idx)))
+                out_str = out_str + f'Cache[{hex(set_idx)},{hex(set_ent_idx)}] = \
+                    {mem_content}.\n'
 
         return out_str
 
