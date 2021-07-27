@@ -154,7 +154,7 @@ class Cache(object):
         '''Write to a write-through cache includes writing to the cache \
             and to the memory'''        
         self._extern_main_memory.memory_write(address,data) # Always write to main memory    
-        cache_idx = self._compute_cache_write_entry(address) # Compute cache write index        
+        cache_idx, write_to_mem = self._compute_cache_write_entry(address) # Compute cache write index        
         self._replacement_policy.cache_ent_acc(cache_idx) # Inform the replacement policy about a cache access
         self._cache_memory.memory_write(cache_idx, data) # writes to the cache memory
         # Write through does not have the concept of dirty bit        

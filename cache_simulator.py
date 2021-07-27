@@ -43,8 +43,8 @@ class cache_simulator(object):
                                 "W" for write operations as the opcode for the operation')
 
         self._stats()
-        # self._cache_dump()
-        # self._extern_memory_dump()
+        self._cache_dump()
+        self._extern_memory_dump()
 
 
     def _extern_memory_dump(self) -> None:
@@ -79,11 +79,11 @@ def main():
 
     cache_sim_params = {}
     cache_sim_params['cache_name'] = args.cache_name
-    cache_sim_params['cache_size'] = args.cache_size
-    cache_sim_params['cache_assoc'] = args.cache_assoc
+    cache_sim_params['cache_size'] = int(args.cache_size)
+    cache_sim_params['cache_assoc'] = int(args.cache_assoc)
     cache_sim_params['cache_wr_policy'] = args.cache_wr_policy
     cache_sim_params['mem_name'] = args.mem_name
-    cache_sim_params['mem_size'] = args.mem_size
+    cache_sim_params['mem_size'] = int(args.mem_size)
     cache_sim = cache_simulator(cache_sim_params)
 
     if args.ins_file:
