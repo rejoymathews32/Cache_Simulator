@@ -1,12 +1,12 @@
+#!/usr/bin/env python3
 # Author / Maintainer : Rejoy Roy Mathews
-
 from cache import Cache
 from LRU import LRU
 from Memory import Memory
 import argparse
 
 class cache_simulator(object):
-    '''Class simulator takes in a user cache configuration(name, size, 
+    '''Cache simulator takes in a user cache configuration(name, size, 
     associativity, write policy) & memory configuration(name, size)
     and simulates cache and external memory accesses for the
     cache configuration.
@@ -15,24 +15,30 @@ class cache_simulator(object):
     '''
 
     def __init__(self, cache_sim_param : dict) -> None:
+        # Replacement policy for the cache
         self._r_policy      = LRU(cache_sim_param['cache_size'],
                                   cache_sim_param['cache_assoc'])
+        # Memory the cache interfaces with
         self._extern_memory = Memory(cache_sim_param['mem_name'],
                             cache_sim_param['mem_size'])
+        # Cache to simulate
         self._cache         = Cache(cache_sim_param['cache_name'],
                             cache_sim_param['cache_size'],
                             cache_sim_param['cache_assoc'],
                             cache_sim_param['cache_wr_policy'],
                             self._extern_memory,
-                            self._r_policy
-                            )
+                            self._r_policy)
 
 
     def run(self, cache_ops_inp) ->  None:
-
+        '''
+        Implement all the Read/Write instructions provided in the instruction file
+        '''
         with open(cache_ops_inp, 'r') as f:
+            # Extract all the instructions
             cache_ops = [line.split() for line in f]
 
+        # Issue read/write instructions to cache
         for ins in range(len(cache_ops)):
             if cache_ops[ins][0] == 'R':
                 self._cache.read_from_cache(int(cache_ops[ins][1],0))
@@ -42,9 +48,10 @@ class cache_simulator(object):
                 raise ValueError('Specify "R" for read operations or  \
                                 "W" for write operations as the opcode for the operation')
 
-        self._stats()
-        self._cache_dump()
-        self._extern_memory_dump()
+
+        self._stats() # Dump post completion statistics
+        self._cache_dump() # Dump post completion cache state
+        self._extern_memory_dump() # Dump post completion memory state
 
 
     def _extern_memory_dump(self) -> None:
@@ -79,11 +86,11 @@ def main():
 
     cache_sim_params = {}
     cache_sim_params['cache_name'] = args.cache_name
-    cache_sim_params['cache_size'] = int(args.cache_size)
-    cache_sim_params['cache_assoc'] = int(args.cache_assoc)
+    cache_sim_params['cache_size'] = args.cache_size
+    cache_sim_params['cache_assoc'] = args.cache_assoc
     cache_sim_params['cache_wr_policy'] = args.cache_wr_policy
     cache_sim_params['mem_name'] = args.mem_name
-    cache_sim_params['mem_size'] = int(args.mem_size)
+    cache_sim_params['mem_size'] = args.mem_size
     cache_sim = cache_simulator(cache_sim_params)
 
     if args.ins_file:

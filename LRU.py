@@ -15,14 +15,16 @@ class LRU(replacement_policy):
 
     def compute_to_evict(self, set_id : int) -> int :
         '''
-        This method takes in the cache set ID. The entry in the cache set which
-        has been used least recently will be evicted. LRU does this by increamenting
+        This method accepts the cache set ID. The entry in the cache set which
+        has been used least recently will be evicted. LRU increaments
         the age of all the entries in a set by one upon cache set access.
-        The age of the cache set entry that was accessed is set to 0
+        The age of the cache set entry that was accessed is set to 0. The least
+        recently used entry is the entry with the highest age
         '''        
         set_base_addr = set_id*self._cache_associativity
         replace_index = set_base_addr
         max_age = self._age_vector[set_base_addr]
+        # Compute the max age and replacement index for a set
         for idx in range(set_base_addr,set_base_addr+self._cache_associativity):
             if(self._age_vector[idx] > max_age):
                 max_age = self._age_vector[idx]
@@ -32,11 +34,13 @@ class LRU(replacement_policy):
 
     def cache_ent_acc(self, cache_idx) -> None :
         '''
-        This method recomutes the age for all the entries in the set upon every new
+        This method accepts the cache index and computes the cache set from the index.
+        It recomutes the age for all the entries in the set upon every new
         access to any member in the set
         '''
         set_idx = int(cache_idx/self._cache_associativity)
         set_ent_st_idx = set_idx*self._cache_associativity
+        # Run over all the entries in the cache set and update age
         for idx in range(set_ent_st_idx,set_ent_st_idx+self._cache_associativity):
             if(idx == cache_idx):
                 self._age_vector[idx] = 0

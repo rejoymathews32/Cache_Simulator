@@ -41,8 +41,10 @@ class Cache(object):
 
         self._name                = name # Cache name
         self._write_policy        = write_policy # Cache write policy
-        self._cache_size          = int(size) # Cache size
-        self._cache_associativity = int(associativity) # Cache associaitivty
+        self._cache_size          = size # Cache size
+        self._cache_associativity = associativity # Cache associaitivty
+
+        #RRM - resume
         self._cache_entries       = int(self._cache_size / 4) # integer entries in the Cache are 4 bytes each
         self._cache_sets          = int(self._cache_entries / self._cache_associativity) # Number of sets in a cache
         self._cache_set_bits      = int(math.log2(self._cache_sets)) # Cache set bits
